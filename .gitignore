@@ -1,0 +1,7 @@
+sdkconfig*
+.vscode
+.cache
+build
+bin
+input*.txt
+*.exe
