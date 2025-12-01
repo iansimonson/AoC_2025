@@ -77,7 +77,45 @@ part_1 :: proc(data: string) -> int {
 }
 
 part_2 :: proc(data: string) -> int {
-    return 0
+    zeros: int
+    dial := 50
+    data := data
+
+    line_no: int
+    for line in strings.split_lines_iterator(&data) {
+        defer line_no += 1
+        if len(line) == 0 do continue
+
+        value, v_ok := strconv.parse_int(line[1:])
+        if !v_ok {
+            fmt.wprintfln(stderr, "Unable to parse value on line %d - %s", line_no, line)
+            continue
+        }
+
+        full_rotations := value / 100
+        zeros += full_rotations
+
+        partial_rot := value - (full_rotations * 100)
+
+        if line[0] == 'R' {
+            dial_end := (dial + partial_rot) %% 100
+            if dial_end < dial {
+                zeros += 1
+            }
+            dial = dial_end
+        } else if line[0] == 'L' {
+            dial_end := (dial - partial_rot) %% 100
+            if (dial != 0 && dial_end > dial) || dial_end == 0 {
+                zeros += 1
+            }
+            dial = dial_end
+        } else {
+            fmt.wprintfln(stderr, "Invalid instruction on line %d - %s", line_no, line)
+            continue
+        }
+    }
+
+    return zeros
 }
 
 @(test)
@@ -87,9 +125,15 @@ part_1_test :: proc(t: ^testing.T) {
 
 @(test)
 part_2_test :: proc(t: ^testing.T) {
-    testing.expect_value(t, part_2(test_input), 0)
+    testing.expect_value(t, part_2(test_input), 6)
 }
 
+@(test)
+part_2_test_2 :: proc(t: ^testing.T) {
+    testing.expect_value(t, part_2(other_example), 10)
+}
+
+// Copy the example input here
 test_input := `L68
 L30
 R48
@@ -100,4 +144,7 @@ L1
 L99
 R14
 L82
+`
+
+other_example := `R1000
 `
