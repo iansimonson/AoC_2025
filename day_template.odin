@@ -5,19 +5,23 @@ import "core:fmt"
 import "core:math"
 import "core:mem"
 import "core:os2"
+import "core:io"
 import "core:slice"
 import "core:strconv"
 import "core:strings"
 import "core:testing"
 import "core:time"
 
+stderr: io.Stream
 
 main :: proc() {
+    stderr := os2.to_writer(os2.stderr)
+
     fmt.println("Advent of Code Day X!")
     fmt.println("=====================")
 
     if len(os2.args) < 2 {
-        fmt.fprintln(os2.stderr, "Error - no file provided")
+        fmt.wprintln(stderr, "Error - no file provided")
         usage()
         os2.exit(1)
     }
@@ -57,3 +61,5 @@ part_1_test :: proc(t: ^testing.T) {
 part_2_test :: proc(t: ^testing.T) {
     testing.expect_value(t, part_2(test_input), 1234)
 }
+
+test_input := ``

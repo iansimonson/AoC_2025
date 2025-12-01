@@ -2,6 +2,7 @@ sdkconfig*
 .vscode
 .cache
 build
+/input/
 bin
 input*.txt
 *.exe
