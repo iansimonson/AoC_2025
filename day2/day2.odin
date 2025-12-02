@@ -78,8 +78,8 @@ part_1 :: proc(data: string) -> int {
             start_digits = num_digits(to_check)
         }
 
-        fmt.printfln("range %d - %s: start: %d, end: %d, start_digits: %d, end_digits: %d, to_check: %d",
-            i, range, start, end, start_digits, end_digits, to_check)
+        /*fmt.printfln("range %d - %s: start: %d, end: %d, start_digits: %d, end_digits: %d, to_check: %d",
+            i, range, start, end, start_digits, end_digits, to_check)*/
 
         outer: for start_digits <= end_digits {
             half_digits := start_digits / 2
@@ -87,9 +87,12 @@ part_1 :: proc(data: string) -> int {
             left_value := to_check / p10_half_digits
             right_value := to_check % p10_half_digits
 
-            fmt.printfln("range %d - %s: start_digits: %d, half_digits: %d, p10_half: %d, left: %d, right: %d",
-                i, range, start_digits, half_digits, p10_half_digits, left_value, right_value)
+            /*fmt.printfln("range %d - %s: start_digits: %d, half_digits: %d, p10_half: %d, left: %d, right: %d",
+                i, range, start_digits, half_digits, p10_half_digits, left_value, right_value)*/
 
+            // just need to make the smallest number larger than current
+            // which happens to be left value + 1 and arbitrary right value
+            // if right value is less, then just set it to left value effectively
             if left_value < right_value {
                 left_value += 1
             }
@@ -99,18 +102,18 @@ part_1 :: proc(data: string) -> int {
             if value > end {
                 break outer
             }
-            fmt.printfln("range %d - %s found match: %d", i, range, value)
+            /*fmt.printfln("range %d - %s found match: %d", i, range, value)*/
 
             range_result += value
             num_range_results += 1
             for left_value < (p10_half_digits - 1) {
                 left_value += 1
                 value = full_number(left_value)
-                fmt.printfln("range %d - %s checking string %d, becomes %d, end %d", i, range, left_value, value, end)
+                /*fmt.printfln("range %d - %s checking string %d, becomes %d, end %d", i, range, left_value, value, end)*/
                 if value > end {
                     break outer
                 }
-                fmt.printfln("range %d - %s found match: %d", i, range, value)
+                /*fmt.printfln("range %d - %s found match: %d", i, range, value)*/
                 range_result += value
                 num_range_results += 1
             }
@@ -119,7 +122,7 @@ part_1 :: proc(data: string) -> int {
             start_digits = num_digits(to_check)
         }
 
-        fmt.printfln("range %d - %s added %d matches for %d value", i, range, num_range_results, range_result)
+        /*fmt.printfln("range %d - %s added %d matches for %d value", i, range, num_range_results, range_result)*/
         result += range_result
         
     }
