@@ -88,6 +88,10 @@ part_1 :: proc(data: string) -> int {
 
         outer: for start_digits <= end_digits {
             half_digits := start_digits / 2
+            // max value for the half we're going to check
+            // e.g. if we're looking at 1010, digits is 4, half digits is 2
+            // so we're looking at e.g. (10, 10) and the max value for the sub-range
+            // is 99. so up to check values < 10^half_digits or e.g. 100
             p10_half_digits := pow_10(half_digits)
             left_value := to_check / p10_half_digits
             right_value := to_check % p10_half_digits
@@ -160,6 +164,10 @@ part_2 :: proc(data: string) -> int {
                 if start_digits % split_by != 0 do continue
 
                 split_digits := start_digits / split_by
+
+                // max value for the sub-range we're going to be checking
+                // e.g. if split_digits is 3 (e.g. 123) then all values will be less
+                // than 10^3 (1000)
                 p10_split_digits := pow_10(split_digits)
                 // fmt.printfln("range %d - %s splitting in %ds %d digits per value %d ceiling", i, range, split_by, split_digits, p10_split_digits)
 
