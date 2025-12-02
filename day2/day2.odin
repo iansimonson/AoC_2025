@@ -32,9 +32,14 @@ main :: proc() {
         os2.exit(1)
     }
 
+    s := time.now()
+
     p1 := part_1(string(data))
     p2 := part_2(string(data))
 
+    e := time.now()
+
+    fmt.println("Time:", time.diff(s, e))
     fmt.println("Part 1:", p1)
     fmt.println("Part 2:", p2)
 }
@@ -129,78 +134,6 @@ part_1 :: proc(data: string) -> int {
     return result
 }
 
-num_digits :: proc(value: int) -> int {
-    value := value
-    result: int
-    for value > 0 {
-        result += 1
-        value /= 10
-    }
-    return result
-}
-
-pow_10 :: proc(power: int) -> int {
-    result := 1
-    for i in 0..<power {
-        result *= 10
-    }
-    return result
-}
-
-// returns the smallest next possible value given a current value
-// e.g. 123123 -> 10001000
-// because after 6, the next possible number of digits is 8 and
-// numbers can't start with a 0
-next_smallest_possible_p10 :: proc(value: int) -> int {
-    value := value
-    cur_p10 := num_digits(value)
-    if (cur_p10 & 1) != 0 {
-        value *= 10
-        cur_p10 += 1
-    } else {
-        value *= 100
-        cur_p10 += 2
-    }
-
-    cur_p10_half := cur_p10 / 2
-    result := 1
-    for i in 0..<cur_p10_half {
-        result *= 10
-    }
-
-    result += 1
-    for i in 0..<(cur_p10_half - 1) {
-        result *= 10
-    }
-    return result
-}
-
-// unlike in p1, we could possibly have odd number
-// of digits here
-next_smallest_possible_part2 :: proc(value: int) -> int {
-    value := value
-    cur_p10 := num_digits(value)
-    return pow_10(cur_p10)
-}
-
-full_number :: proc(num: int) -> int {
-    digits := num_digits(num)
-    shift := pow_10(digits)
-    return num * shift + num
-}
-
-full_number_nsplit :: proc(num, split_by: int) -> int {
-    digits := num_digits(num)
-    shift := pow_10(digits)
-    result := num
-    split_by := split_by
-    for split_by > 1 {
-        result = (result * shift) + num
-        split_by -= 1
-    }
-    return result
-}
-
 part_2 :: proc(data: string) -> int {
     result: int
     ranges, split_err := strings.split(data, ",")
@@ -211,6 +144,7 @@ part_2 :: proc(data: string) -> int {
     }
     values: [dynamic]int
     defer delete(values)
+    // need the map becuase some IDs can match multiple times e.g. 1111
     matches: map[int]struct{}
     defer delete(matches)
 
@@ -282,6 +216,82 @@ part_2 :: proc(data: string) -> int {
             //fmt.printfln("range %d - %s. found match %d", i, range, k)
             result += k
         }
+    }
+    return result
+}
+
+num_digits :: proc(value: int) -> int {
+    value := value
+    result: int
+    for value > 0 {
+        result += 1
+        value /= 10
+    }
+    return result
+}
+
+pow_10 :: proc(power: int) -> int {
+    result := 1
+    for i in 0..<power {
+        result *= 10
+    }
+    return result
+}
+
+// returns the smallest next possible value given a current value
+// e.g. 123123 -> 10001000
+// because after 6, the next possible number of digits is 8 and
+// numbers can't start with a 0
+next_smallest_possible_p10 :: proc(value: int) -> int {
+    value := value
+    cur_p10 := num_digits(value)
+    if (cur_p10 & 1) != 0 {
+        value *= 10
+        cur_p10 += 1
+    } else {
+        value *= 100
+        cur_p10 += 2
+    }
+
+    cur_p10_half := cur_p10 / 2
+    result := 1
+    for i in 0..<cur_p10_half {
+        result *= 10
+    }
+
+    result += 1
+    for i in 0..<(cur_p10_half - 1) {
+        result *= 10
+    }
+    return result
+}
+
+// unlike in p1, we could possibly have odd number
+// of digits here. this would also work for part 1
+// but I wrote the more complicates/specific version first
+next_smallest_possible_part2 :: proc(value: int) -> int {
+    value := value
+    cur_p10 := num_digits(value)
+    return pow_10(cur_p10)
+}
+
+// this only works for part 1 since it's basically full_number_nsplit
+// below but split_by is 2. However I wrote it first so I'm leaving it as-is
+full_number :: proc(num: int) -> int {
+    digits := num_digits(num)
+    shift := pow_10(digits)
+    return num * shift + num
+}
+
+// the more gneeralized version of full_number
+full_number_nsplit :: proc(num, split_by: int) -> int {
+    digits := num_digits(num)
+    shift := pow_10(digits)
+    result := num
+    split_by := split_by
+    for split_by > 1 {
+        result = (result * shift) + num
+        split_by -= 1
     }
     return result
 }
