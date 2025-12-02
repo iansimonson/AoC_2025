@@ -102,18 +102,8 @@ part_1 :: proc(data: string) -> int {
                 left_value += 1
             }
 
-            // at this point left and right value are the same so just use left
-            value := full_number(left_value)
-            if value > end {
-                break outer
-            }
-            /*fmt.printfln("range %d - %s found match: %d", i, range, value)*/
-
-            range_result += value
-            num_range_results += 1
-            for left_value < (p10_half_digits - 1) {
-                left_value += 1
-                value = full_number(left_value)
+            for left_value < p10_half_digits {
+                value := full_number(left_value)
                 /*fmt.printfln("range %d - %s checking string %d, becomes %d, end %d", i, range, left_value, value, end)*/
                 if value > end {
                     break outer
@@ -121,6 +111,7 @@ part_1 :: proc(data: string) -> int {
                 /*fmt.printfln("range %d - %s found match: %d", i, range, value)*/
                 range_result += value
                 num_range_results += 1
+                left_value += 1
             }
 
             to_check = next_smallest_possible_p10(to_check)
@@ -187,23 +178,14 @@ part_2 :: proc(data: string) -> int {
                 }
                 left_value := values[len(values) - 1]
                 
-                // now in same place as before, just cycle through
-                value := full_number_nsplit(left_value, split_by)
-                // fmt.printfln("range %d - %s split by %d all values = %v, starting with left value %d full value %d", i, range, split_by, values[:], left_value, value)
-                if value > end {
-                    // fmt.printfln("range %d - %s full value %d greater than end %d", i, range, value, end)
-                    continue
-                }
-                // fmt.printfln("range %d - %s, split_by %d found match: %d", i, range, split_by, value)
-                matches[value] = {}
-                for left_value < (p10_split_digits - 1) {
-                    left_value += 1
-                    value = full_number_nsplit(left_value, split_by)
+                for left_value < p10_split_digits {
+                    value := full_number_nsplit(left_value, split_by)
                     if value > end {
                         continue split
                     }
                     // fmt.printfln("range %d - %s, split_by %d found match: %d", i, range, split_by, value)
                     matches[value] = {}
+                    left_value += 1
                 }
             }
 
