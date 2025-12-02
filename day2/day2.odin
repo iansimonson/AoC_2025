@@ -236,6 +236,7 @@ part_2 :: proc(data: string) -> int {
 
                 split_digits := start_digits / split_by
                 p10_split_digits := pow_10(split_digits)
+                // fmt.printfln("range %d - %s splitting in %ds %d digits per value %d ceiling", i, range, split_by, split_digits, p10_split_digits)
 
                 split_to_check := to_check
 
@@ -243,21 +244,23 @@ part_2 :: proc(data: string) -> int {
                     append(&values, split_to_check % p10_split_digits)
                     split_to_check /= p10_split_digits
                 }
-                need_plus_1 := false
-                left_value := values[len(values) - 1]
-                for v in values[:len(values) - 1] {
-                    if left_value < v {
-                        left_value += 1
-                        break
+                // generalized form of left_value + 1 if left_value < right_value
+                for &v, i in values[1:] {
+                    if v < values[i] {
+                        v += 1
+                        values[i] = 0
                     }
                 }
-
+                left_value := values[len(values) - 1]
+                
                 // now in same place as before, just cycle through
                 value := full_number_nsplit(left_value, split_by)
+                // fmt.printfln("range %d - %s split by %d all values = %v, starting with left value %d full value %d", i, range, split_by, values[:], left_value, value)
                 if value > end {
+                    // fmt.printfln("range %d - %s full value %d greater than end %d", i, range, value, end)
                     continue
                 }
-                //fmt.printfln("range %d - %s, split_by %d found match: %d", i, range, split_by, value)
+                // fmt.printfln("range %d - %s, split_by %d found match: %d", i, range, split_by, value)
                 matches[value] = {}
                 for left_value < (p10_split_digits - 1) {
                     left_value += 1
@@ -265,7 +268,7 @@ part_2 :: proc(data: string) -> int {
                     if value > end {
                         continue split
                     }
-                    //fmt.printfln("range %d - %s, split_by %d found match: %d", i, range, split_by, value)
+                    // fmt.printfln("range %d - %s, split_by %d found match: %d", i, range, split_by, value)
                     matches[value] = {}
                 }
             }
