@@ -1,10 +1,10 @@
-//+ignore
+#+ignore
 package dayX
 
 import "core:fmt"
 import "core:math"
 import "core:mem"
-import "core:os2"
+import "core:os/os2"
 import "core:io"
 import "core:slice"
 import "core:strconv"
@@ -15,7 +15,7 @@ import "core:time"
 stderr: io.Stream
 
 main :: proc() {
-    stderr := os2.to_writer(os2.stderr)
+    stderr = os2.to_writer(os2.stderr)
 
     fmt.println("Advent of Code Day X!")
     fmt.println("=====================")
@@ -26,9 +26,9 @@ main :: proc() {
         os2.exit(1)
     }
 
-    data, file_err := os2.read_entire_file_from_path(os.args[1], context.allocator)
+    data, file_err := os2.read_entire_file_from_path(os2.args[1], context.allocator)
     if file_err != nil {
-        fmt.fprintfln(os.stderr, "Error reading %s - %#v", os.args[1], file_err)
+        fmt.wprintfln(stderr, "Error reading %s - %#v", os2.args[1], file_err)
         usage()
         os2.exit(1)
     }
@@ -41,7 +41,7 @@ main :: proc() {
 }
 
 usage :: proc() {
-    fmt.fprintln(os.stderr, "Usage: dayN path/to/input.txt")
+    fmt.wprintfln(stderr, "Usage: %s path/to/input.txt", os2.args[0])
 }
 
 part_1 :: proc(data: string) -> int {
