@@ -175,14 +175,112 @@ next_smallest_possible_p10 :: proc(value: int) -> int {
     return result
 }
 
+// unlike in p1, we could possibly have odd number
+// of digits here
+next_smallest_possible_part2 :: proc(value: int) -> int {
+    value := value
+    cur_p10 := num_digits(value)
+    return pow_10(cur_p10)
+}
+
 full_number :: proc(num: int) -> int {
     digits := num_digits(num)
     shift := pow_10(digits)
     return num * shift + num
 }
 
+full_number_nsplit :: proc(num, split_by: int) -> int {
+    digits := num_digits(num)
+    shift := pow_10(digits)
+    result := num
+    split_by := split_by
+    for split_by > 1 {
+        result = (result * shift) + num
+        split_by -= 1
+    }
+    return result
+}
+
 part_2 :: proc(data: string) -> int {
-    return 0
+    result: int
+    ranges, split_err := strings.split(data, ",")
+    defer delete(ranges)
+    if split_err != nil {
+        fmt.wprintfln(stderr, "Could not split string - %#v", split_err)
+        return 0
+    }
+    values: [dynamic]int
+    defer delete(values)
+    matches: map[int]struct{}
+    defer delete(matches)
+
+    for range, i in ranges {
+        clear(&matches)
+        sep := strings.index_byte(range, '-')
+        start, s_ok := strconv.parse_int(range[:sep])
+        end, e_ok := strconv.parse_int(strings.trim_right_space(range[sep+1:]))
+        if !s_ok || !e_ok {
+            fmt.wprintfln(stderr, "Could not parse range %d - %s, s_ok: %v, e_ok: %v", i, range, s_ok, e_ok)
+            continue
+        }
+
+        start_digits := num_digits(start)
+        end_digits := num_digits(end)
+
+        to_check := start
+
+        outer: for start_digits <= end_digits {
+            split: for split_by := start_digits; split_by >= 2; split_by -= 1 {
+                clear(&values)
+                if start_digits % split_by != 0 do continue
+
+                split_digits := start_digits / split_by
+                p10_split_digits := pow_10(split_digits)
+
+                split_to_check := to_check
+
+                for split_to_check > 0 {
+                    append(&values, split_to_check % p10_split_digits)
+                    split_to_check /= p10_split_digits
+                }
+                need_plus_1 := false
+                left_value := values[len(values) - 1]
+                for v in values[:len(values) - 1] {
+                    if left_value < v {
+                        left_value += 1
+                        break
+                    }
+                }
+
+                // now in same place as before, just cycle through
+                value := full_number_nsplit(left_value, split_by)
+                if value > end {
+                    continue
+                }
+                //fmt.printfln("range %d - %s, split_by %d found match: %d", i, range, split_by, value)
+                matches[value] = {}
+                for left_value < (p10_split_digits - 1) {
+                    left_value += 1
+                    value = full_number_nsplit(left_value, split_by)
+                    if value > end {
+                        continue split
+                    }
+                    //fmt.printfln("range %d - %s, split_by %d found match: %d", i, range, split_by, value)
+                    matches[value] = {}
+                }
+            }
+
+            to_check = next_smallest_possible_part2(to_check)
+            start_digits = num_digits(to_check)
+            //fmt.printfln("range %d - %s, next checking %d, digits %d", i, range, to_check, start_digits)
+        }
+
+        for k, _ in matches {
+            //fmt.printfln("range %d - %s. found match %d", i, range, k)
+            result += k
+        }
+    }
+    return result
 }
 
 @(test)
@@ -192,7 +290,7 @@ part_1_test :: proc(t: ^testing.T) {
 
 @(test)
 part_2_test :: proc(t: ^testing.T) {
-    testing.expect_value(t, part_2(test_input), 1234)
+    testing.expect_value(t, part_2(test_input), 4174379265)
 }
 
 test_input := `11-22,95-115,998-1012,1188511880-1188511890,222220-222224,1698522-1698528,446443-446449,38593856-38593862,565653-565659,824824821-824824827,2121212118-2121212124`
