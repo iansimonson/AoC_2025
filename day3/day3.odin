@@ -16,7 +16,7 @@ stderr: io.Stream
 main :: proc() {
     stderr = os2.to_writer(os2.stderr)
 
-    fmt.println("Advent of Code Day X!")
+    fmt.println("Advent of Code Day 3!")
     fmt.println("=====================")
 
     if len(os2.args) < 2 {
