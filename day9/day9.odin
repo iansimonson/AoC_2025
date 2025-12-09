@@ -33,8 +33,13 @@ main :: proc() {
         os2.exit(1)
     }
 
+    s := time.now()
     p1 := part_1(string(data))
+    pe := time.now()
     p2 := part_2(string(data))
+    e := time.now()
+
+    fmt.printfln("Timing: %v, %v", time.diff(s, pe), time.diff(pe, e))
 
     fmt.println("Part 1:", p1)
     fmt.println("Part 2:", p2)
@@ -70,122 +75,62 @@ part_1 :: proc(data: string) -> int {
 Point :: [2]int
 Line_Seg :: [2]Point
 
-BIG :: 1_000_000
-SMALL :: 0
-
-is_right_turn :: proc(pt, prv, nxt: Point) -> bool {
-    l1, l2 := pt - prv, nxt - pt
-    if l1.x == 0 {
-        return (l1.y > 0 && l2.x > 0) || (l1.y < 0 && l2.x < 0)
-    } else if l1.y == 0 {
-        return (l1.x > 0 && l2.y < 0) || (l1.x < 0 && l2.y > 0)
-    } else {
-        fmt.wprintfln(stderr, "ERROR: point %v with lines %v, %v don't turn", pt, l1, l2)
-        return false
-    }
-}
-
-intersects_non_overlapping :: proc(l1, l2: Line_Seg) -> bool {
-    l1_horiz := (l1.y - l1.x).y == 0
-    l2_horiz := (l2.y - l2.x).y == 0
-
-    if l1_horiz && !l2_horiz {
-        l1_x1, l1_x2 := l1[0].x, l1[1].x
-        l1_x1, l1_x2 = min(l1_x1, l1_x2), max(l1_x1, l1_x2) // make canonical
-        l1_y := l1[0].y
-
-        l2_x := l2[0].x
-        l2_y1, l2_y2 := l2[0].y, l2[1].y
-        l2_y1, l2_y2 = min(l2_y1, l2_y2), max(l2_y1, l2_y2) // make canonical
-
-        return (l1_x1 < l2_x && l1_x2 > l2_x) && (l1_y > l2_y1 && l1_y < l2_y2)
-    } else if !l1_horiz && l2_horiz {
-        l1_y1, l1_y2 := l1[0].y, l1[1].y
-        l1_y1, l1_y2 = min(l1_y1, l1_y2), max(l1_y1, l1_y2) // make canonical
-        l1_x := l1[0].x
-
-        l2_y := l2[0].y
-        l2_x1, l2_x2 := l2[0].x, l2[1].x
-        l2_x1, l2_x2 = min(l2_x1, l2_x2), max(l2_x1, l2_x2) // make canonical
-
-        return (l1_y1 < l2_y && l1_y2 > l2_y) && (l1_x > l2_x1 && l1_x < l2_x2)
-    }
-
-    return false
-}
-
-// ignore the fact it says x1, x2 - this works with ys also
-overlapping :: proc(l1, l2, p: int) -> bool {
-    l1, l2 := min(l1, l2), max(l1, l2)
-    return l1 < p && p < l2
-}
-
-leaving_object :: proc(r, prv, nxt: Line_Seg, line_segs: []Line_Seg) -> bool {
-    r_dir := r[1] - r[0]
-    prv_dir := prv[1] - prv[0]
-    nxt_dir := nxt[1] - nxt[0]
-
-    horizontal := r_dir.y == 0
-    arb_line: Line_Seg
-    if horizontal && r_dir.x < 0 {
-        arb_line = Line_Seg{r[0], Point{SMALL, r[0].y}}
-    } else if horizontal && r_dir.x > 0 {
-        arb_line = Line_Seg{r[0], Point{BIG, r[0].y}}
-    } else if r_dir.y < 0 {
-        arb_line = Line_Seg{r[0], Point{r[0].x, SMALL}}
-    } else {
-        arb_line = Line_Seg{r[0], Point{r[0].x, BIG}}
-    }
-
-    // not going in direction of prv ray, now need to see if we're going into
-    // the object or out of it
-    if linalg.dot(r_dir, prv_dir) < 0 {
-        for line_seg in line_segs {
-            
-        }
-    } else if linalg.dot(r_dir, nxt_dir) < 0 {
-        
-    }
-
-
-
-}
-
 // returns true if box is within the overall shape
-check_rays :: proc(c1_idx, c2_idx: int, points: []Point, right_turns: []bool, line_segs: []Line_Seg) -> bool {
-    assert(len(points) == len(right_turns))
+check_rays :: proc(c1_idx, c2_idx: int, points: []Point, line_segs: []Line_Seg) -> bool {
     assert(len(points) == len(line_segs))
 
     c1, c2 := points[c1_idx], points[c2_idx]
-    opp_pt1, opp_pt2 := Point{c1.x, c2.y}, Point{c2.x, c1.y}
 
-    l1 := Line_Seg{c1, opp_pt1} // always vertical line
-    l2 := Line_Seg{c1, opp_pt2} // always horizontal line
-    prv_l := Line_Seg{c1, points[(c1_idx - 1) %% len(points)]}
-    nxt_l := Line_Seg{c1, points[(c1_idx + 1) %% len(points)]}
-    if leaving_object(l1, prv_l, nxt_l) { return false }
+    bounds := [2]Point{{min(c1.x, c2.x), min(c1.y, c2.y)}, {max(c1.x, c2.x), max(c1.y, c2.y)}}
+    bounds_dir := bounds[1] - bounds[0]
+
+    // first check, are there any points (vertices) on the interor of the square?
+    // if so then this is an invalid square, no need to do other checks
+    for p in points {
+        if p == c1 || p == c2 { continue }
+        // p is within the bounding box (and not on the perimeter line)
+        if bounds[0].x < p.x && p.x < bounds[1].x && bounds[0].y < p.y && p.y < bounds[1].y { 
+            return false 
+        }
+    }
+
     
-    l3 := Line_Seg{c2, opp_pt1} // always horizontal
-    l4 := Line_Seg{c2, opp_pt2} // always vertical
-    prv2_l := Line_Seg{points[(c2_idx - 1) %% len(points)], c2}
-    nxt2_l := Line_Seg{points[(c2_idx + 1) %% len(points)], c2}
-    if leaving_object(l3, l4, prv2_l, nxt2_l, right_turns[c2_idx]) { return false }
+    p_half_x1 := Point{bounds[0].x + (bounds[1].x - bounds[0].x) / 2, bounds[0].y}
+    p_half_x2 := Point{bounds[0].x + (bounds[1].x - bounds[0].x) / 2, bounds[1].y}
+    p_half_y1 := Point{bounds[0].x, bounds[0].y + (bounds[1].y - bounds[0].y) / 2}
+    p_half_y2 := Point{bounds[1].x, bounds[0].y + (bounds[1].y - bounds[0].y) / 2}
 
-
+    intersects_horiz1, intersects_horiz2: int
+    intersects_verts1, intersects_verts2: int
     for line_seg in line_segs {
-        // non-overlapping becuase it's ok to end on the line segment
-        if intersects_non_overlapping(l1, line_seg) || intersects_non_overlapping(l2, line_seg) { return false }
-        else if intersects_non_overlapping(l3, line_seg) || intersects_non_overlapping(l4, line_seg) { return false }
+        ls_dir := line_seg[1] - line_seg[0]
+        if ls_dir.y == 0 { // horizontal line
+            if line_seg[0].y > p_half_x1.y && line_seg[0].x < p_half_x1.x && line_seg[1].x > p_half_x1.x {
+                intersects_horiz1 += 1
+            }
+            if line_seg[0].y < p_half_x2.y && line_seg[0].x < p_half_x2.x && line_seg[1].x > p_half_x2.x {
+                intersects_horiz2 += 1
+            }
+        } else if ls_dir.x == 0 {
+            if line_seg[0].x > p_half_y1.x && line_seg[0].y < p_half_y1.y && line_seg[1].y > p_half_y1.y {
+                intersects_verts1 += 1
+            }
+            if line_seg[0].x < p_half_y2.x && line_seg[0].y < p_half_y2.y && line_seg[1].y > p_half_y2.y {
+                intersects_verts2 += 1
+            }
+        }
+    }
+    h1_outside := intersects_horiz1 > 0 && ((intersects_horiz1 & 1) == 0)
+    h2_outside := intersects_horiz2 > 0 && ((intersects_horiz2 & 1) == 0)
+    v1_outside := intersects_verts1 > 0 && ((intersects_verts1 & 1) == 0)
+    v2_outside := intersects_verts2 > 0 && ((intersects_verts2 & 1) == 0) 
+    if h1_outside || h2_outside || v1_outside || v2_outside {
+        return false
     }
 
-    for point, i in points {
-        if point == c1 || point == opp_pt1 || point == c2 || point == opp_pt2 { continue }
-        
-        if l1[0].x == point.x && overlapping(l1[0].y, l1[1].y, point.y) && !right_turns[i] { return false }
-        else if l2[0].y == point.y && overlapping(l2[0].x, l2[1].x, point.x) && !right_turns[i] { return false }
-        else if l3[0].y == point.y && overlapping(l3[0].x, l3[1].x, point.x) && !right_turns[i] { return false }
-        else if l4[0].x == point.x && overlapping(l4[0].y, l4[1].y, point.y) && !right_turns[i] { return false }
-    }
+    // remaining edge case, what if it's all on a single line and we need to detect it's outside...
+    // this is probably fine to ignore because the area we're looking for is quite large
+    // hah, it is not fine to ignore this case, my current answer is wrong despite all examples passing
 
     return true
 }
@@ -193,6 +138,7 @@ check_rays :: proc(c1_idx, c2_idx: int, points: []Point, right_turns: []bool, li
 part_2 :: proc(data: string) -> int {
     data := data
     points := make([dynamic]Point, 0, 100)
+    defer delete(points)
     largest: int
 
     for line in strings.split_lines_iterator(&data) {
@@ -203,20 +149,33 @@ part_2 :: proc(data: string) -> int {
         append(&points, point)
     }
 
-    right_turns := make([]bool, len(points))
+    // line segments are all set up so the closer point to
+    // (0, 0) is first and the further point is second
+    // since all lines are horizontal or vertical this is just based
+    // on the relevant x or y coord
     line_segs := make([]Line_Seg, len(points))
+    defer delete(line_segs)
     for p, i in points {
-        right_turns[i] = is_right_turn(p, points[(i - 1) %% len(points)], points[(i + 1) %% len(points)])
-        line_segs[i] = Line_Seg{points[(i - 1) %% len(points)], p}
+        p1 := p
+        p2 := points[(i - 1) %% len(points)]
+        dv := p2 - p1
+        if dv.x == 0 { // vertical line
+            p1, p2 = Point{p1.x, min(p1.y, p2.y)}, Point{p1.x, max(p1.y, p2.y)}
+            line_segs[i] = Line_Seg{p1, p2}
+        } else if dv.y == 0 {
+            p1, p2 = Point{min(p1.x, p2.x), p1.y}, Point{max(p1.x, p2.x), p1.y}
+            line_segs[i] = Line_Seg{p1, p2}
+        } else {
+            assert(false, "unable to make line segment")
+        }
     }
 
     for p1, i in points {
         for p2, j in points[i+1:] {
-            if check_rays(i, j + (i + 1), points[:], right_turns, line_segs) {
+            if check_rays(i, j + (i + 1), points[:], line_segs) {
                 // inclusive ranges
                 d := linalg.abs(p2 - p1) + [2]int{1, 1}
                 area := d.x * d.y
-                // fmt.printfln("points (%v, %v) seem ok - area %d", p1, p2, area)
                 if area > largest {
                     largest = area
                 }
@@ -242,6 +201,11 @@ part_2_test_2 :: proc(t: ^testing.T) {
     testing.expect_value(t, part_2(t2), 33)
 }
 
+@(test)
+part_2_test_3 :: proc(t: ^testing.T) {
+    testing.expect_value(t, part_2(t3), 24)
+}
+
 test_input := `7,1
 11,1
 11,7
@@ -263,3 +227,16 @@ t2 := `1,0
 6,7
 6,9
 1,9`
+
+t3 := `7,1
+11,1
+11,7
+9,7
+9,5
+6,5
+6,7
+5,7
+5,5
+2,5
+2,3
+7,3`
