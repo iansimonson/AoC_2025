@@ -70,6 +70,9 @@ part_1 :: proc(data: string) -> int {
 Point :: [2]int
 Line_Seg :: [2]Point
 
+BIG :: 1_000_000
+SMALL :: 0
+
 is_right_turn :: proc(pt, prv, nxt: Point) -> bool {
     l1, l2 := pt - prv, nxt - pt
     if l1.x == 0 {
@@ -117,20 +120,35 @@ overlapping :: proc(l1, l2, p: int) -> bool {
     return l1 < p && p < l2
 }
 
-leaving_object :: proc(r1, r2, connected1, connected2: Line_Seg, right_turn: bool) -> bool {
-    r1_dir := r1[1] - r1[0]
-    r2_dir := r2[1] - r2[0]
+leaving_object :: proc(r, prv, nxt: Line_Seg, line_segs: []Line_Seg) -> bool {
+    r_dir := r[1] - r[0]
+    prv_dir := prv[1] - prv[0]
+    nxt_dir := nxt[1] - nxt[0]
 
-    c1_dir := connected1[1] - connected1[0]
-    c2_dir := connected2[1] - connected2[0]
-
-    if right_turn {
-        return (linalg.dot(r1_dir, c1_dir) + linalg.dot(r1_dir, c2_dir) < 0) &&
-                (linalg.dot(r2_dir, c1_dir) + linalg.dot(r2_dir, c2_dir) < 0)
+    horizontal := r_dir.y == 0
+    arb_line: Line_Seg
+    if horizontal && r_dir.x < 0 {
+        arb_line = Line_Seg{r[0], Point{SMALL, r[0].y}}
+    } else if horizontal && r_dir.x > 0 {
+        arb_line = Line_Seg{r[0], Point{BIG, r[0].y}}
+    } else if r_dir.y < 0 {
+        arb_line = Line_Seg{r[0], Point{r[0].x, SMALL}}
     } else {
-        return (linalg.dot(r1_dir, c1_dir) + linalg.dot(r1_dir, c2_dir) > 0) &&
-                (linalg.dot(r2_dir, c1_dir) + linalg.dot(r2_dir, c2_dir) > 0)
+        arb_line = Line_Seg{r[0], Point{r[0].x, BIG}}
     }
+
+    // not going in direction of prv ray, now need to see if we're going into
+    // the object or out of it
+    if linalg.dot(r_dir, prv_dir) < 0 {
+        for line_seg in line_segs {
+            
+        }
+    } else if linalg.dot(r_dir, nxt_dir) < 0 {
+        
+    }
+
+
+
 }
 
 // returns true if box is within the overall shape
@@ -143,9 +161,9 @@ check_rays :: proc(c1_idx, c2_idx: int, points: []Point, right_turns: []bool, li
 
     l1 := Line_Seg{c1, opp_pt1} // always vertical line
     l2 := Line_Seg{c1, opp_pt2} // always horizontal line
-    prv_l := Line_Seg{points[(c1_idx - 1) %% len(points)], c1}
-    nxt_l := Line_Seg{points[(c1_idx + 1) %% len(points)], c1}
-    if leaving_object(l1, l2, prv_l, nxt_l, right_turns[c1_idx]) { return false }
+    prv_l := Line_Seg{c1, points[(c1_idx - 1) %% len(points)]}
+    nxt_l := Line_Seg{c1, points[(c1_idx + 1) %% len(points)]}
+    if leaving_object(l1, prv_l, nxt_l) { return false }
     
     l3 := Line_Seg{c2, opp_pt1} // always horizontal
     l4 := Line_Seg{c2, opp_pt2} // always vertical
