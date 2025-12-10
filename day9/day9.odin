@@ -11,10 +11,14 @@ import "core:strconv"
 import "core:strings"
 import "core:testing"
 import "core:time"
+import rl "vendor:raylib"
+import "core:c"
 
 stderr: io.Stream
 
 main :: proc() {
+    rl.InitWindow(1080, 920, "woo")
+    defer rl.CloseWindow()
     stderr = os2.to_writer(os2.stderr)
 
     fmt.println("Advent of Code Day 9!")
@@ -95,37 +99,35 @@ check_rays :: proc(c1_idx, c2_idx: int, points: []Point, line_segs: []Line_Seg) 
     }
 
     
-    p_half_x1 := Point{bounds[0].x + (bounds[1].x - bounds[0].x) / 2, bounds[0].y}
-    p_half_x2 := Point{bounds[0].x + (bounds[1].x - bounds[0].x) / 2, bounds[1].y}
-    p_half_y1 := Point{bounds[0].x, bounds[0].y + (bounds[1].y - bounds[0].y) / 2}
-    p_half_y2 := Point{bounds[1].x, bounds[0].y + (bounds[1].y - bounds[0].y) / 2}
+    horizontal_rays := Point{bounds[0].x /* + (bounds[1].x - bounds[0].x) / 2*/, bounds[0].y}
+    vert_rays := Point{bounds[0].x, bounds[0].y /*+ (bounds[1].y - bounds[0].y) / 2*/}
 
-    intersects_horiz1, intersects_horiz2: int
-    intersects_verts1, intersects_verts2: int
-    for line_seg in line_segs {
-        ls_dir := line_seg[1] - line_seg[0]
-        if ls_dir.y == 0 { // horizontal line
-            if line_seg[0].y > p_half_x1.y && line_seg[0].x < p_half_x1.x && line_seg[1].x > p_half_x1.x {
-                intersects_horiz1 += 1
-            }
-            if line_seg[0].y < p_half_x2.y && line_seg[0].x < p_half_x2.x && line_seg[1].x > p_half_x2.x {
-                intersects_horiz2 += 1
-            }
-        } else if ls_dir.x == 0 {
-            if line_seg[0].x > p_half_y1.x && line_seg[0].y < p_half_y1.y && line_seg[1].y > p_half_y1.y {
-                intersects_verts1 += 1
-            }
-            if line_seg[0].x < p_half_y2.x && line_seg[0].y < p_half_y2.y && line_seg[1].y > p_half_y2.y {
-                intersects_verts2 += 1
+    intersects_horiz: int
+    intersects_verts: int
+    {
+        x := min(bounds[0].x + 1, bounds[1].x)
+        intersects_horiz = 0
+        for line_seg in line_segs {
+            ls_dir := line_seg[1] - line_seg[0]
+            if ls_dir.y != 0 { continue } // checking horizontal lines only
+            if line_seg[0].y > bounds[0].y && line_seg[0].x < x && line_seg[1].x > x {
+                intersects_horiz += 1
             }
         }
+        if intersects_horiz > 1 { return false }
     }
-    h1_outside := intersects_horiz1 > 0 && ((intersects_horiz1 & 1) == 0)
-    h2_outside := intersects_horiz2 > 0 && ((intersects_horiz2 & 1) == 0)
-    v1_outside := intersects_verts1 > 0 && ((intersects_verts1 & 1) == 0)
-    v2_outside := intersects_verts2 > 0 && ((intersects_verts2 & 1) == 0) 
-    if h1_outside || h2_outside || v1_outside || v2_outside {
-        return false
+
+    {
+        y := min(bounds[0].y + 1, bounds[1].y)
+        intersects_verts = 0
+        for line_seg in line_segs {
+            ls_dir := line_seg[1] - line_seg[0]
+            if ls_dir.x != 0 { continue } // checking vertical lines only
+            if line_seg[0].x > bounds[0].x && line_seg[0].y < y && line_seg[1].y > y {
+                intersects_verts += 1
+            }
+        }
+        if intersects_verts > 1 { return false }
     }
 
     // remaining edge case, what if it's all on a single line and we need to detect it's outside...
@@ -170,6 +172,20 @@ part_2 :: proc(data: string) -> int {
         }
     }
 
+    largest_x: int
+    largest_y: int
+    for p in points {
+        if p.x > largest_x {
+            largest_x = p.x
+        }
+        if p.y > largest_y {
+            largest_y = p.y
+        }
+    }
+
+
+    lp1, lp2: Point
+
     for p1, i in points {
         for p2, j in points[i+1:] {
             if check_rays(i, j + (i + 1), points[:], line_segs) {
@@ -177,10 +193,29 @@ part_2 :: proc(data: string) -> int {
                 d := linalg.abs(p2 - p1) + [2]int{1, 1}
                 area := d.x * d.y
                 if area > largest {
+                    lp1, lp2 = p1, p2
                     largest = area
                 }
             }
         }
+    }
+
+    when !ODIN_TEST {
+        for {
+            rl.BeginDrawing()
+            for l in line_segs {
+                rl.DrawLine(c.int(f64(l[0].x)/f64(largest_x) * 1080), c.int(f64(l[0].y)/f64(largest_y)*920), c.int(f64(l[1].x)/f64(largest_x) * 1080), c.int(f64(l[1].y)/f64(largest_y) * 920), rl.GREEN)
+            }
+            for p in points {
+                rl.DrawCircle(c.int(f64(p.x)/f64(largest_x)*1080), c.int(f64(p.y)/f64(largest_y)*920), 1, rl.RED)
+            }
+            rl.DrawCircle(c.int(f64(lp1.x)/f64(largest_x)*1080), c.int(f64(lp1.y)/f64(largest_y)*920), 5, rl.BLUE)
+            rl.DrawCircle(c.int(f64(lp2.x)/f64(largest_x)*1080), c.int(f64(lp2.y)/f64(largest_y)*920), 5, rl.WHITE)
+            d := linalg.abs(lp2 - lp1) + [2]int{1, 1}
+            area := d.x * d.y
+            fmt.println(lp1, lp2, area)
+            rl.EndDrawing()
+}
     }
 
     return largest
