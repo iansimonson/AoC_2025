@@ -16,9 +16,13 @@ import "core:c"
 
 stderr: io.Stream
 
+USE_RAYLIB :: #config(USE_RAYLIB, false)
+
 main :: proc() {
-    rl.InitWindow(1080, 920, "woo")
-    defer rl.CloseWindow()
+    when USE_RAYLIB {
+        rl.InitWindow(1080, 920, "woo")
+        defer rl.CloseWindow()
+    }
     stderr = os2.to_writer(os2.stderr)
 
     fmt.println("Advent of Code Day 9!")
@@ -200,7 +204,7 @@ part_2 :: proc(data: string) -> int {
         }
     }
 
-    when !ODIN_TEST {
+    when !ODIN_TEST && USE_RAYLIB {
         for {
             rl.BeginDrawing()
             for l in line_segs {
