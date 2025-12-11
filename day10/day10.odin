@@ -32,11 +32,11 @@ main :: proc() {
         os2.exit(1)
     }
 
-    p1 := part_1(string(data))
+    // p1 := part_1(string(data))
     fmt.println("part 1 done")
     p2 := part_2(string(data))
 
-    fmt.println("Part 1:", p1)
+    // fmt.println("Part 1:", p1)
     fmt.println("Part 2:", p2)
 }
 
@@ -142,6 +142,7 @@ parse_joltages :: proc(raw: string) -> State {
         joltages.joltages[v_idx] = joltage
         v_idx += 1
     }
+    joltages.num_joltages = v_idx
     return joltages
 }
 
@@ -164,56 +165,61 @@ part_2 :: proc(data: string) -> int {
         cur_joltages := State{0, joltages.num_joltages}
         cache := make(map[State]int)
 
-        find_goal :: proc(cur, goal: State, cur_presses: int, buttons: []Lights, cache: ^map[State]int) -> (int, bool) {
-            if cur == goal {
-                cached, exists := cache[goal]
-                if !exists {
-                    cache[goal] = cur_presses
-                    return cur_presses, true
-                } else if cur_presses < cached {
-                    cache[goal] = cur_presses
-                    return cur_presses, true
-                } else {
-                    return cached, false
-                }
-            } else if goal in cache && cache[goal] <= cur_presses { // if we reached goal already another way, exit here
-                return max(int), false
-            }
-
-            if cur in cache && cache[cur] < cur_presses { // we're back to where we were before
-                return max(int), false
+        find_goal :: proc(cur, goal: State, cur_presses: int, buttons: []Lights, cache: ^map[State]int) -> int {
+            if cur == goal && (cur not_in cache || cache[cur] > cur_presses) {
+                cache[cur] = cur_presses
+                return cur_presses
+            } else if goal in cache && cache[goal] <= cur_presses {
+                return max(int)
+            } else if cur in cache && cur_presses >= cache[cur] {
+                return max(int)
             }
 
             cache[cur] = cur_presses
-
-            m := max(int)
-            found_here: bool
-            next := cur
-            outer: for button in buttons {
-                for b in button {
-                    next.joltages[b] += 1
-                }
-                defer for b in button {
-                    next.joltages[b] -= 1
-                }
-
-                for joltage, i in next.joltages {
-                    // can never go down in joltage
-                    if joltage > goal.joltages[i] { continue outer }
-                }
-
-                presses, found := find_goal(next, goal, cur_presses + 1, buttons, cache)
-                if found {
-                    m = min(m, presses)
-                    found_here = true
+            
+            cur, goal := cur, goal
+            if slice.all_of(cur.joltages[:cur.num_joltages], cur.joltages[0]) && cur.joltages[0] > 0 {
+                m_joltage := slice.min(goal.joltages[:goal.num_joltages])
+                multiplier := m_joltage / cur.joltages[0]
+                mults := cur
+                for i in 1..<multiplier {
+                    mults.joltages += cur.joltages
+                    if mults not_in cache || cache[mults] > (cur_presses + i * cur_presses) {
+                        cache[mults] = cur_presses + i * cur_presses
+                    }
                 }
             }
 
-            return m, found_here
+            min_presses := max(int)
+            for i in 0..<goal.num_joltages {
+                if cur.joltages[i] == goal.joltages[i] { continue }
+
+                added_presses := goal.joltages[i] - cur.joltages[i]
+                for {
+                    outer: for button in buttons {
+                        if i not_in button { continue }
+    
+                        next := cur
+                        for b in button {
+                            next.joltages[b] += added_presses
+                            if next.joltages[b] > goal.joltages[b] { continue outer }
+                        }
+    
+                        presses := find_goal(next, goal, cur_presses + added_presses, buttons, cache)
+                        min_presses = min(min_presses, presses)
+                    }
+                    if min_presses != max(int) { break }
+                    added_presses -= 1
+                    if added_presses == 0 { break }
+                }
+            }
+
+            return min_presses
         }
 
-        presses, _ := find_goal(cur_joltages, joltages, 0, buttons[:], &cache)
-        result += presses
+        presses := find_goal(cur_joltages, joltages, 0, buttons[:], &cache)
+        if presses == max(int) { fmt.printfln("COULDN'T FIND SOLUTION: %s", line)}
+        else { result += presses }
     }
 
     return result
