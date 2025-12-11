@@ -146,9 +146,93 @@ parse_joltages :: proc(raw: string) -> State {
     return joltages
 }
 
+parse_buttons_as_joltages :: proc(raw: string, num_joltage: int) -> Mat {
+    raw := raw
+    buttons: Mat
+    buttons.row = num_joltage
+    cols := strings.count(raw, ")")
+    buttons.col = cols
+    buttons.data = make([]int, buttons.row * buttons.col)
+
+    button_num: int
+    for len(raw) > 0 {
+        next := strings.index_byte(raw, '(')
+        if next == -1 { break }
+        end := strings.index_byte(raw, ')')
+        button_raw := raw[next+1:end]
+        button: [10]int
+        for v_str in strings.split_iterator(&button_raw, ",") {
+            v, _ := strconv.parse_int(v_str)
+            button[v] = 1
+        }
+
+        for i in 0..<num_joltage {
+            buttons.data[i * buttons.col + button_num] = button[i]
+        }
+        
+        raw = raw[end + 1:]
+        button_num += 1
+    }
+    return buttons
+}
+
 State :: struct {
     joltages: [10]int,
     num_joltages: int,
+}
+
+Mat :: struct {
+    data: []int,
+    row, col: int
+}
+
+transpose :: proc(m: Mat) -> Mat {
+    result: Mat
+    result.row, result.col = m.col, m.row
+    result.data = make([]int, result.row * result.col)
+    for r in 0..<result.row {
+        for c in 0..<result.col {
+            result.data[r * result.col + c] = m.data[c * m.col + r]
+        }
+    }
+    return result
+}
+
+mult :: proc(m1, m2: Mat) -> Mat {
+    assert(m1.col == m2.row)
+    result := Mat{
+        row = m1.row,
+        col = m2.col,
+        data = make([]int, m1.row * m2.col),
+    }
+
+    for r in 0..<m1.row {
+        for c2 in 0..<m2.col {
+            v: int
+            for c1 in 0..<m1.col {
+                v += m1.data[r * m1.col + c1] * m2.data[c1*m2.col + c2]
+            }
+            result.data[r * result.col + c2] = v
+        }
+    }
+
+    return result
+}
+
+// TODO: determine the inverse of the matrix
+// gotta do this like one row at a time and 
+// probably do the equivalent of what I would do by hand...
+// it's weird for sure
+calc_inverse :: proc(m: Mat) -> Mat {
+    assert(m.row == m.col)
+    result := Mat{
+        row = m.row,
+        col = m.col,
+        data = make([]int, m.row * m.col)
+    }
+    for i in 0..<m.row {
+        result.data[i * m.col + i] = 1
+    }
 }
 
 part_2 :: proc(data: string) -> int {
@@ -160,66 +244,13 @@ part_2 :: proc(data: string) -> int {
         end := strings.index_byte(line, ']')
 
         joltage_begin := strings.index_byte(line, '{')
-        buttons := parse_buttons(line[end + 1:joltage_begin])
         joltages := parse_joltages(line[joltage_begin:])
-        cur_joltages := State{0, joltages.num_joltages}
-        cache := make(map[State]int)
+        buttons := parse_buttons_as_joltages(line[end + 1:joltage_begin], joltages.num_joltages)
+        transpose := transpose(buttons)
+        square := mult(buttons, transpose)
 
-        find_goal :: proc(cur, goal: State, cur_presses: int, buttons: []Lights, cache: ^map[State]int) -> int {
-            if cur == goal && (cur not_in cache || cache[cur] > cur_presses) {
-                cache[cur] = cur_presses
-                return cur_presses
-            } else if goal in cache && cache[goal] <= cur_presses {
-                return max(int)
-            } else if cur in cache && cur_presses >= cache[cur] {
-                return max(int)
-            }
+        fmt.println("buttons:", buttons, "\n", "transpose:", transpose, "\n", "square:", square)
 
-            cache[cur] = cur_presses
-            
-            cur, goal := cur, goal
-            if slice.all_of(cur.joltages[:cur.num_joltages], cur.joltages[0]) && cur.joltages[0] > 0 {
-                m_joltage := slice.min(goal.joltages[:goal.num_joltages])
-                multiplier := m_joltage / cur.joltages[0]
-                mults := cur
-                for i in 1..<multiplier {
-                    mults.joltages += cur.joltages
-                    if mults not_in cache || cache[mults] > (cur_presses + i * cur_presses) {
-                        cache[mults] = cur_presses + i * cur_presses
-                    }
-                }
-            }
-
-            min_presses := max(int)
-            for i in 0..<goal.num_joltages {
-                if cur.joltages[i] == goal.joltages[i] { continue }
-
-                added_presses := goal.joltages[i] - cur.joltages[i]
-                for {
-                    outer: for button in buttons {
-                        if i not_in button { continue }
-    
-                        next := cur
-                        for b in button {
-                            next.joltages[b] += added_presses
-                            if next.joltages[b] > goal.joltages[b] { continue outer }
-                        }
-    
-                        presses := find_goal(next, goal, cur_presses + added_presses, buttons, cache)
-                        min_presses = min(min_presses, presses)
-                    }
-                    if min_presses != max(int) { break }
-                    added_presses -= 1
-                    if added_presses == 0 { break }
-                }
-            }
-
-            return min_presses
-        }
-
-        presses := find_goal(cur_joltages, joltages, 0, buttons[:], &cache)
-        if presses == max(int) { fmt.printfln("COULDN'T FIND SOLUTION: %s", line)}
-        else { result += presses }
     }
 
     return result
